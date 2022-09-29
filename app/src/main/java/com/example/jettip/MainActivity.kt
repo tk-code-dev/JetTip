@@ -1,6 +1,7 @@
 package com.example.jettip
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -79,10 +80,20 @@ fun TopHeader(totalPerPerson: Double = 0.0) {
     }
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Preview
 @Composable
 fun MainContent() {
+    BillForm() { billAmt ->
+        Log.d("amt", "MainContent: $billAmt")
+    }
+}
+
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+fun BillForm(
+    modifier: Modifier = Modifier,
+    onValueChange: (String) -> Unit = {}
+) {
     val totalBillState = remember {
         mutableStateOf("")
     }
@@ -90,6 +101,7 @@ fun MainContent() {
         totalBillState.value.trim().isNotEmpty()
     }
     val keyboardController = LocalSoftwareKeyboardController.current
+
     Surface(
         modifier = Modifier
             .padding(2.dp)
@@ -103,9 +115,9 @@ fun MainContent() {
                 labelId = "Enter Bill",
                 enabled = true,
                 isSingleLine = true,
-                onAction = KeyboardActions{
+                onAction = KeyboardActions {
                     if (!validState) return@KeyboardActions
-                    // Todo - onValueChanged
+                    onValueChange(totalBillState.value.trim())   // the value for trailing Lambda
                     keyboardController?.hide()
                 }
             )
