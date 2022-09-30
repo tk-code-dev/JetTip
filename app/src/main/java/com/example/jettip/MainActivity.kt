@@ -32,6 +32,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.example.jettip.components.InputField
 import com.example.jettip.ui.theme.JetTipTheme
+import com.example.jettip.util.calculateTotalTip
 import com.example.jettip.widgets.RoundIconButton
 
 class MainActivity : ComponentActivity() {
@@ -111,6 +112,14 @@ fun BillForm(
     val sliderPositionState = remember {
         mutableStateOf(0f)
     }
+    val tipPercentage = (sliderPositionState.value * 100 / 4).toInt()
+    val splitByState = remember {
+        mutableStateOf(1)
+    }
+    val splitRange = IntRange(start = 1, endInclusive = 100)
+    val tipAmountState = remember {
+        mutableStateOf(0.0)
+    }
 
     Column() {
 
@@ -154,9 +163,13 @@ fun BillForm(
                         RoundIconButton(
                             modifier = modifier,
                             imageVector = Icons.Default.Remove,
-                            onClick = { Log.d("Icon", "BillForm: Remove") })
+                            onClick = {
+                                splitByState.value =
+                                    if (splitByState.value > 1) splitByState.value - 1
+                                    else 1
+                            })
                         Text(
-                            text = "#",
+                            text = "${splitByState.value}",
                             modifier = Modifier
                                 .align(Alignment.CenterVertically)
                                 .padding(start = 12.dp, end = 12.dp)
@@ -164,7 +177,11 @@ fun BillForm(
                         RoundIconButton(
                             modifier = modifier,
                             imageVector = Icons.Default.Add,
-                            onClick = { Log.d("Icon", "BillForm: Add") })
+                            onClick = {
+                                if (splitByState.value < splitRange.last) {
+                                    splitByState.value += 1
+                                }
+                            })
                     }
                 }
 
@@ -172,21 +189,29 @@ fun BillForm(
                 Row(modifier = Modifier.padding(horizontal = 3.dp, vertical = 12.dp)) {
                     Text(text = "Tip", modifier = Modifier.align(Alignment.CenterVertically))
                     Spacer(modifier = Modifier.width(200.dp))
-                    Text(text = "$0.00", modifier = Modifier.align(Alignment.CenterVertically))
+                    Text(
+                        text = "$ ${tipAmountState.value}",
+                        modifier = Modifier.align(Alignment.CenterVertically)
+                    )
                 }
 
                 Column(
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(text = "0%")
+                    Text(text = "$tipPercentage %")
                     Spacer(modifier = Modifier.height(14.dp))
+
+                    //  ---Slider---
                     Slider(value = sliderPositionState.value, onValueChange = { newVal ->
                         sliderPositionState.value = newVal
-                        Log.d("Slider", "BillForm: $newVal")
+                        tipAmountState.value = calculateTotalTip(
+                            totalBill = if (totalBillState.value.isNotEmpty()) totalBillState.value.toDouble() else 0.0,
+                            tipPercentage = tipPercentage
+                        )
                     },
                         modifier = Modifier.padding(start = 16.dp, end = 16.dp),
-                        steps = 3,
+                        steps = 7,
                         onValueChangeFinished = {
 //                    Log.d(TAG, "BillForm: ")
                         })
