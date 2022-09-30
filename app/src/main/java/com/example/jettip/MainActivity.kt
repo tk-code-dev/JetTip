@@ -2,6 +2,7 @@ package com.example.jettip
 
 import android.os.Bundle
 import android.util.Log
+import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -11,6 +12,7 @@ import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Slider
 import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -63,6 +65,7 @@ fun TopHeader(totalPerPerson: Double = 0.0) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(16.dp)
             .height(150.dp)
             .clip(shape = CircleShape.copy(all = CornerSize(12.dp))),
         color = Color(0xFFE9D7F7)
@@ -105,31 +108,39 @@ fun BillForm(
         totalBillState.value.trim().isNotEmpty()
     }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val sliderPositionState = remember {
+        mutableStateOf(0f)
+    }
 
-    Surface(
-        modifier = Modifier
-            .padding(2.dp)
-            .fillMaxWidth(),
-        shape = RoundedCornerShape(corner = CornerSize(8.dp)),
-        border = BorderStroke(width = 2.dp, color = Color.LightGray)
-    ) {
-        Column(
-            modifier = Modifier.padding(6.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.Start
+    Column() {
+
+        TopHeader()
+
+        Surface(
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxWidth(),
+            shape = RoundedCornerShape(corner = CornerSize(8.dp)),
+            border = BorderStroke(width = 2.dp, color = Color.LightGray)
         ) {
-            InputField(
-                valueState = totalBillState,
-                labelId = "Enter Bill",
-                enabled = true,
-                isSingleLine = true,
-                onAction = KeyboardActions {
-                    if (!validState) return@KeyboardActions
-                    onValueChange(totalBillState.value.trim())   // the value for trailing Lambda
-                    keyboardController?.hide()
-                }
-            )
-            if (validState) {
+            Column(
+                modifier = Modifier.padding(6.dp),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.Start
+            ) {
+                InputField(
+                    valueState = totalBillState,
+                    labelId = "Enter Bill",
+                    enabled = true,
+                    isSingleLine = true,
+                    onAction = KeyboardActions {
+                        if (!validState) return@KeyboardActions
+                        onValueChange(totalBillState.value.trim())   // the value for trailing Lambda
+                        keyboardController?.hide()
+                    }
+                )
+//            if (validState) {
+                //  ---Split Row---
                 Row(modifier = Modifier.padding(3.dp), horizontalArrangement = Arrangement.Start) {
                     Text(
                         "Split",
@@ -144,14 +155,47 @@ fun BillForm(
                             modifier = modifier,
                             imageVector = Icons.Default.Remove,
                             onClick = { Log.d("Icon", "BillForm: Remove") })
+                        Text(
+                            text = "#",
+                            modifier = Modifier
+                                .align(Alignment.CenterVertically)
+                                .padding(start = 12.dp, end = 12.dp)
+                        )
                         RoundIconButton(
                             modifier = modifier,
                             imageVector = Icons.Default.Add,
                             onClick = { Log.d("Icon", "BillForm: Add") })
                     }
                 }
-            } else {
-                Box() {}
+
+                // ---Tip Row---
+                Row(modifier = Modifier.padding(horizontal = 3.dp, vertical = 12.dp)) {
+                    Text(text = "Tip", modifier = Modifier.align(Alignment.CenterVertically))
+                    Spacer(modifier = Modifier.width(200.dp))
+                    Text(text = "$0.00", modifier = Modifier.align(Alignment.CenterVertically))
+                }
+
+                Column(
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(text = "0%")
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Slider(value = sliderPositionState.value, onValueChange = { newVal ->
+                        sliderPositionState.value = newVal
+                        Log.d("Slider", "BillForm: $newVal")
+                    },
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp),
+                        steps = 3,
+                        onValueChangeFinished = {
+//                    Log.d(TAG, "BillForm: ")
+                        })
+
+                }
+
+//            } else {
+//                Box() {}
+//            }
             }
         }
     }
