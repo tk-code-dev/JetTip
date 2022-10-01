@@ -2,7 +2,6 @@ package com.example.jettip
 
 import android.os.Bundle
 import android.util.Log
-import android.widget.Space
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.BorderStroke
@@ -19,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -30,8 +30,8 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.text.isDigitsOnly
 import com.example.jettip.components.InputField
+import com.example.jettip.components.InputFieldSmall
 import com.example.jettip.ui.theme.JetTipTheme
 import com.example.jettip.util.calculateTotalPerPerson
 import com.example.jettip.util.calculateTotalTip
@@ -42,7 +42,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MyApp {
-                //TopHeader()
                 MainContent()
             }
         }
@@ -83,7 +82,7 @@ fun TopHeader(totalPerPerson: Double = 0.0) {
             Text(text = "Total per Person", style = MaterialTheme.typography.h5)
             Text(
                 text = "$$total",
-                style = MaterialTheme.typography.h4,
+                style = MaterialTheme.typography.h3,
                 fontWeight = FontWeight.Bold
             )
         }
@@ -93,7 +92,27 @@ fun TopHeader(totalPerPerson: Double = 0.0) {
 @Preview
 @Composable
 fun MainContent() {
-    BillForm() { billAmt ->
+//  ---State Hoisting---
+    val splitByState = remember {
+        mutableStateOf(1)
+    }
+//    val splitRange = IntRange(start = 1, endInclusive = 100)
+    val tipAmountState = remember {
+        mutableStateOf(0.0)
+    }
+    val totalPerPersonState = remember {
+        mutableStateOf(0.0)
+    }
+    val tipPercentageState = remember {
+        mutableStateOf(0)
+    }
+
+    BillForm(
+        splitByState = splitByState,
+        tipAmountState = tipAmountState,
+        totalPerPersonState = totalPerPersonState,
+        tipPercentageState = tipPercentageState
+    ) { billAmt ->
         Log.d("amt", "MainContent: $billAmt")
     }
 }
@@ -102,29 +121,31 @@ fun MainContent() {
 @Composable
 fun BillForm(
     modifier: Modifier = Modifier,
+    splitRange: IntRange = 1..100,
+    splitByState: MutableState<Int>,
+    tipAmountState: MutableState<Double>,
+    tipPercentageState: MutableState<Int>,
+    totalPerPersonState: MutableState<Double>,
     onValueChange: (String) -> Unit = {}
 ) {
+    val customTipState = remember {
+        mutableStateOf("")
+    }
     val totalBillState = remember {
         mutableStateOf("")
     }
     val validState = remember(totalBillState.value) {
         totalBillState.value.trim().isNotEmpty()
     }
+    val validSliderState = remember(customTipState.value) {
+        customTipState.value.isNotEmpty()
+    }
     val keyboardController = LocalSoftwareKeyboardController.current
     val sliderPositionState = remember {
         mutableStateOf(0f)
     }
-    val tipPercentage = (sliderPositionState.value * 100 / 4).toInt()
-    val splitByState = remember {
-        mutableStateOf(1)
-    }
-    val splitRange = IntRange(start = 1, endInclusive = 100)
-    val tipAmountState = remember {
-        mutableStateOf(0.0)
-    }
-    val totalPerPersonState = remember {
-        mutableStateOf(0.0)
-    }
+    var tipPercentage = (sliderPositionState.value * 100 / 4).toInt()
+
     val patternNumber = remember { Regex("^\\d+\$") }
 
     Column() {
@@ -189,6 +210,8 @@ fun BillForm(
                                 })
                             Text(
                                 text = "${splitByState.value}",
+                                style = MaterialTheme.typography.h6,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier
                                     .align(Alignment.CenterVertically)
                                     .padding(start = 12.dp, end = 12.dp)
@@ -215,20 +238,29 @@ fun BillForm(
                         Spacer(modifier = Modifier.width(200.dp))
                         Text(
                             text = "$ ${tipAmountState.value}",
-                            modifier = Modifier.align(Alignment.CenterVertically)
+                            modifier = Modifier.align(Alignment.CenterVertically),
+                            style = MaterialTheme.typography.h6
                         )
                     }
-
+                    //  ---Slider---
                     Column(
                         verticalArrangement = Arrangement.Center,
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(text = "$tipPercentage %")
-                        Spacer(modifier = Modifier.height(14.dp))
+                        if (tipPercentage in 1..25) {
+                            Text(text = "$tipPercentage %", style = MaterialTheme.typography.h6)
 
-                        //  ---Slider---
+                        } else {
+                            Text(
+                                text = "spacer",
+                                style = MaterialTheme.typography.h6,
+                                color = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(14.dp))
                         Slider(value = sliderPositionState.value, onValueChange = { newVal ->
                             sliderPositionState.value = newVal
+                            customTipState.value = ""
                             tipAmountState.value = calculateTotalTip(
                                 totalBill = if (totalBillState.value.isNotEmpty()) totalBillState.value.toDouble() else 0.0,
                                 tipPercentage = tipPercentage
@@ -243,7 +275,39 @@ fun BillForm(
                             steps = 7,
                             onValueChangeFinished = {
                             })
+                    }
 
+                    // ---Custom Tip---
+                    Column(
+                        verticalArrangement = Arrangement.SpaceEvenly,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        InputFieldSmall(
+                            modifier = modifier,
+                            valueState = customTipState,
+                            labelId = "Custom Tip",
+                            enabled = true,
+                            isSingleLine = true,
+                            onAction = KeyboardActions {
+                                if (!validState) return@KeyboardActions
+                                onValueChange(customTipState.value.trim())   // the value for trailing Lambda
+                                keyboardController?.hide()
+                                if (customTipState.value.isEmpty()) {
+                                    customTipState.value = "0"
+                                }
+                                totalPerPersonState.value = calculateTotalPerPerson(
+                                    totalBill = totalBillState.value.toDouble(),
+                                    splitBy = splitByState.value,
+                                    tipPercentage = customTipState.value.toInt()
+                                )
+                                tipAmountState.value =
+                                    totalBillState.value.toDouble() * customTipState.value.trim()
+                                        .toDouble() / 100
+                                tipPercentageState.value = customTipState.value.toInt()
+                                tipPercentage = customTipState.value.toInt()
+                                sliderPositionState.value = 0.0f
+                            }
+                        )
                     }
                 } else {
                     Box() {}
